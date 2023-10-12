@@ -127,7 +127,7 @@ class BrowserContext(ChannelOwner):
         )
         self._channel.on(
             "route",
-            lambda params: asyncio.create_task(
+            lambda params: self._emit_sync(
                 self._on_route(
                     from_channel(params.get("route")),
                 )
@@ -227,7 +227,7 @@ class BrowserContext(ChannelOwner):
                 handled = await route_handler.handle(route)
             finally:
                 if len(self._routes) == 0:
-                    asyncio.create_task(
+                    self._emit_sync(
                         self._connection.wrap_api_call(
                             lambda: self._update_interception_patterns(), True
                         )
@@ -240,7 +240,7 @@ class BrowserContext(ChannelOwner):
         func = self._bindings.get(binding_call._initializer["name"])
         if func is None:
             return
-        asyncio.create_task(binding_call.call(func))
+        self._emit_sync(binding_call.call(func))
 
     def set_default_navigation_timeout(self, timeout: float) -> None:
         return self._set_default_navigation_timeout_impl(timeout)

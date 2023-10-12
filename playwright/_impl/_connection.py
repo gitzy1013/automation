@@ -23,10 +23,12 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
+    Coroutine,
     Dict,
     List,
     Mapping,
     Optional,
+    Set,
     Union,
     cast,
 )
@@ -139,6 +141,8 @@ class ChannelOwner(AsyncIOEventEmitter):
 
         self._event_to_subscription_mapping: Dict[str, str] = {}
 
+        self._running_tasks: Set[asyncio.Task] = set()
+
     def _dispose(self) -> None:
         # Clean up from parent and connection.
         if self._parent:
@@ -172,6 +176,21 @@ class ChannelOwner(AsyncIOEventEmitter):
         if not self.listeners(event):
             self._update_subscription(event, True)
         super()._add_event_handler(event, k, v)
+
+    def _emit_sync(self, coro: Coroutine, ignore_errors: bool = True) -> None:
+        fut = asyncio.ensure_future(coro, loop=self._loop)
+
+        def cb(f: asyncio.Task) -> None:
+            self._running_tasks.remove(f)
+            if f.cancelled():
+                return
+
+            exc: Optional[BaseException] = f.exception()
+            if exc and not ignore_errors:
+                self.emit("error", exc)
+
+        self._running_tasks.add(fut)
+        fut.add_done_callback(cb)
 
     def remove_listener(self, event: str, f: Any) -> None:
         super().remove_listener(event, f)

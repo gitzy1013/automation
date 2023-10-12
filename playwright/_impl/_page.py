@@ -178,7 +178,7 @@ class Page(ChannelOwner):
         )
         self._channel.on(
             "route",
-            lambda params: asyncio.create_task(
+            lambda params: self._emit_sync(
                 self._on_route(from_channel(params["route"]))
             ),
         )
@@ -243,7 +243,7 @@ class Page(ChannelOwner):
                 handled = await route_handler.handle(route)
             finally:
                 if len(self._routes) == 0:
-                    asyncio.create_task(
+                    self._emit_sync(
                         self._connection.wrap_api_call(
                             lambda: self._update_interception_patterns(), True
                         )
@@ -255,7 +255,7 @@ class Page(ChannelOwner):
     def _on_binding(self, binding_call: "BindingCall") -> None:
         func = self._bindings.get(binding_call._initializer["name"])
         if func:
-            asyncio.create_task(binding_call.call(func))
+            self._emit_sync(binding_call.call(func))
         self._browser_context._on_binding(binding_call)
 
     def _on_worker(self, worker: "Worker") -> None:
@@ -1260,7 +1260,7 @@ class BindingCall(ChannelOwner):
             await self._channel.send("resolve", dict(result=serialize_argument(result)))
         except Exception as e:
             tb = sys.exc_info()[2]
-            asyncio.create_task(
+            self._emit_sync(
                 self._channel.send(
                     "reject", dict(error=dict(error=serialize_error(e, tb)))
                 )
