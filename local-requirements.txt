@@ -7,7 +7,7 @@ mypy==1.10.1
 objgraph==3.6.1
 Pillow==10.3.0
 pixelmatch==0.3.0
-pre-commit==3.4.0
+pre-commit==3.7.1
 pyOpenSSL==24.1.0
 pytest==8.2.2
 pytest-asyncio==0.21.2
